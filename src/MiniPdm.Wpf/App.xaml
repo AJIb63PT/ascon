@@ -1,0 +1,23 @@
+﻿<Application x:Class="MiniPdm.Wpf.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MiniPdm.Wpf.Converters"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <local:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+        <local:BooleanToVisibilityInverseConverter x:Key="BooleanToVisibilityInverseConverter" />
+        <local:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+        <local:IndentConverter x:Key="IndentConverter" />
+        <local:ImportSeverityBackgroundConverter x:Key="ImportSeverityBackground" />
+        <local:ImportSeverityForegroundConverter x:Key="ImportSeverityForeground" />
+        <local:TabIndexConverter x:Key="IndexConverter" />
+
+        <!-- Строка отчёта импорта красится по результату обработки.
+             Стиль объявлен после конвертеров: StaticResource ищется по порядку,
+             и ссылка на ресурс ниже по файлу не разрешилась бы. -->
+        <Style x:Key="ImportRowStyle" TargetType="DataGridRow">
+            <Setter Property="Background"
+                    Value="{Binding Severity, Converter={StaticResource ImportSeverityBackground}}" />
+        </Style>
+    </Application.Resources>
+</Application>

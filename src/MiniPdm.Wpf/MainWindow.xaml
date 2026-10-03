@@ -1,0 +1,306 @@
+﻿<Window x:Class="MiniPdm.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Мини-PDM — состав изделия"
+        Height="780" Width="1280"
+        MinHeight="560" MinWidth="1000"
+        Background="#F5F6F8"
+        FontFamily="Segoe UI"
+        FontSize="13">
+
+    <Window.Resources>
+        <!-- Отступ строки дерева задаётся привязкой к Indent. -->
+        <DataTemplate x:Key="BomNodeTemplate">
+            <StackPanel Orientation="Horizontal" Margin="{Binding Indent, Converter={StaticResource IndentConverter}}">
+                <TextBlock Text="{Binding DisplayKey}" FontWeight="SemiBold" Margin="0,1,8,1" />
+                <TextBlock Text="{Binding Name}" Foreground="#444" Margin="0,1,8,1" />
+                <TextBlock Text="{Binding TypeName}" Foreground="#777" FontSize="12" Margin="0,1,8,1" />
+                <TextBlock Text="{Binding Quantity, StringFormat='× {0}'}" Foreground="#555" FontSize="12" Margin="0,1,8,1" />
+                <TextBlock Text="{Binding StateName}" Foreground="#777" FontSize="12" Margin="0,1,8,1" />
+                <TextBlock Text="{Binding MassKg, StringFormat='{}{0:F4} кг'}" Foreground="#555" FontSize="12" Margin="0,1,0,1" />
+            </StackPanel>
+        </DataTemplate>
+
+        <HierarchicalDataTemplate x:Key="BomTreeTemplate"
+                                  ItemsSource="{Binding Children}">
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource BomNodeTemplate}" />
+        </HierarchicalDataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Панель действий -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Content="Импорт выгрузки…"
+                    Padding="14,6"
+                    Click="OnBrowseImport"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}" />
+
+            <TextBox Grid.Column="1"
+                     x:Name="SearchBox"
+                     Margin="8,0"
+                     Padding="6,5"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     KeyDown="OnSearchKeyDown"
+                     ToolTip="Обозначение или наименование; Enter — найти" />
+
+            <Button Grid.Column="2"
+                    Content="Найти"
+                    Padding="14,6"
+                    Click="OnSearchClick"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}" />
+
+            <Button Grid.Column="3"
+                    Content="Обновить"
+                    Padding="14,6"
+                    Margin="8,0,0,0"
+                    Command="{Binding RefreshCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}" />
+
+            <Button Grid.Column="4"
+                    Content="Спецификация в CSV"
+                    Padding="14,6"
+                    Margin="8,0,0,0"
+                    Click="OnExportSpecification" />
+        </Grid>
+
+        <!-- Рабочая область -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Список объектов -->
+            <Border Grid.Column="0" Background="White" BorderBrush="#DDD" BorderThickness="1">
+                <DockPanel>
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="10,8"
+                           FontWeight="SemiBold"
+                           Text="Объекты" />
+                <ListBox ItemsSource="{Binding SearchResults}"
+                         SelectedItem="{Binding SelectedObject, Mode=TwoWay}"
+                         BorderThickness="0"
+                         HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,4">
+                                <TextBlock Text="{Binding DisplayKey}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Name}" Foreground="#555" FontSize="12" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- Карточка и состав -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="White" BorderBrush="#DDD" BorderThickness="1" Padding="12" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" FontSize="15" FontWeight="SemiBold" Text="{Binding CardTitle}" />
+
+                        <TextBlock Grid.Row="1"
+                                   Margin="0,6,0,0"
+                                   Foreground="#444"
+                                   Text="{Binding MassText}"
+                                   Visibility="{Binding MassText, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                        <TextBlock Grid.Row="2"
+                                   Margin="0,4,0,0"
+                                   Foreground="#B04A00"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding CompositionWarning}"
+                                   Visibility="{Binding CompositionWarning, Converter={StaticResource StringNotEmptyConverter}}" />
+
+                        <StackPanel Grid.Row="0"
+                                    Grid.RowSpan="3"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top">
+                            <ComboBox Width="150"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center"
+                                      DisplayMemberPath="Title"
+                                      ItemsSource="{Binding TransitionTargets}"
+                                      SelectedItem="{Binding TargetTransition, Mode=TwoWay}" />
+                            <Button Content="Сменить состояние"
+                                    Padding="14,6"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding ChangeStateCommand}"
+                                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="360" />
+                    </Grid.ColumnDefinitions>
+
+                    <TabControl Grid.Column="0"
+                                SelectedIndex="{Binding ImportTabSelected, Converter={StaticResource IndexConverter}, Mode=TwoWay}">
+                        <TabItem Header="Дерево состава">
+                            <TreeView ItemsSource="{Binding TreeRoots}"
+                                      ItemTemplate="{StaticResource BomTreeTemplate}"
+                                      Margin="8" />
+                        </TabItem>
+
+                        <TabItem Header="Спецификация">
+                            <DataGrid ItemsSource="{Binding Specification}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      Margin="8"
+                                      HeadersVisibility="Column">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Обозначение" Binding="{Binding DisplayKey}" Width="140" />
+                                    <DataGridTextColumn Header="Наименование" Binding="{Binding Name}" Width="*" />
+                                    <DataGridTextColumn Header="Тип" Binding="{Binding TypeName}" Width="130" />
+                                    <DataGridTextColumn Header="Кол-во" Binding="{Binding Quantity}" Width="70" />
+                                    <DataGridTextColumn Header="Масса позиции" Binding="{Binding TotalMassText}" Width="120" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+
+                        <TabItem Header="Версии">
+                            <DataGrid ItemsSource="{Binding Versions}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      Margin="8"
+                                      HeadersVisibility="Column">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="№" Binding="{Binding VersionNo}" Width="50" />
+                                    <DataGridTextColumn Header="Состояние" Binding="{Binding StateWithMark}" Width="180" />
+                                    <DataGridTextColumn Header="Материал" Binding="{Binding Material}" Width="*" />
+                                    <DataGridTextColumn Header="Масса, кг" Binding="{Binding MassKg}" Width="100" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+
+                        <TabItem Header="Отчёт импорта">
+                            <DockPanel Margin="8">
+                                <!-- Фильтр по результату и счётчик показаны
+                                     над таблицей: без них в длинной выгрузке
+                                     найти отклонённый документ невозможно. -->
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,8,0"
+                                               Text="Результат:" />
+
+                                    <ComboBox Grid.Column="1"
+                                              HorizontalAlignment="Left"
+                                              Width="240"
+                                              DisplayMemberPath="Title"
+                                              ItemsSource="{Binding ImportFilterOptions}"
+                                              SelectedItem="{Binding SelectedImportFilter, Mode=TwoWay}" />
+                                </Grid>
+
+                                <TextBlock DockPanel.Dock="Top"
+                                           Margin="0,0,0,8"
+                                           Foreground="#555555"
+                                           Text="{Binding ImportReportCountText}" />
+
+                                <!-- Строка отчёта красится по результату: в длинной
+                                     выгрузке отклонения и замечания видны сразу,
+                                     без прокрутки и чтения пояснений. Чередование
+                                     строк отключено, иначе оно перебивало бы заливку. -->
+                                <DataGrid ItemsSource="{Binding FilteredImportOutcomes}"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True"
+                                          AlternationCount="0"
+                                          HeadersVisibility="Column"
+                                          RowStyle="{StaticResource ImportRowStyle}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Файл" Binding="{Binding FileName}" Width="220" />
+                                        <DataGridTextColumn Header="Обозначение" Binding="{Binding Designation}" Width="140" />
+
+                                        <!-- Сортировка идёт по итогу обработки, а не по
+                                             названию: иначе порядок зависел бы от
+                                             алфавита слов «Принято» и «Отклонено». -->
+                                        <DataGridTemplateColumn Header="Результат" SortMemberPath="Severity" Width="120">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding SeverityName}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{Binding Severity, Converter={StaticResource ImportSeverityForeground}}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTextColumn Header="Пояснение" Binding="{Binding Reason}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                        </TabItem>
+                    </TabControl>
+
+                    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                    <TextBox Grid.Column="2"
+                             Margin="8"
+                             Padding="8"
+                             FontFamily="Consolas"
+                             FontSize="12"
+                             IsReadOnly="True"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto"
+                             Text="{Binding StatusText, Mode=OneWay}" />
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Строка состояния -->
+        <Border Grid.Row="2" Margin="0,10,0,0" Background="#ECEEF1" Padding="8,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" TextTrimming="CharacterEllipsis" Text="{Binding StatusText}" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="Занято: " Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityInverseConverter}}" />
+                    <ProgressBar Width="180" Height="14" IsIndeterminate="{Binding IsBusy}" Minimum="0" Maximum="1" Value="{Binding ImportProgress, Mode=OneWay}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

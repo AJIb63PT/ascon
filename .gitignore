@@ -1,0 +1,43 @@
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+## Build
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.dll
+*.pdb
+*.exe
+
+## NuGet
+*.nupkg
+packages/
+.nuget/
+
+## Test / coverage
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.trx
+
+## Runtime data: локальные базы и выгрузки отчётов
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+artifacts/reports/
+
+## OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,24 @@
+name: Mini-PDM (PostgreSQL)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: minipdm-postgres
+    environment:
+      POSTGRES_USER: minipdm
+      POSTGRES_PASSWORD: minipdm
+      POSTGRES_DB: minipdm
+      # Ускоряет инициализацию кластера на Windows.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - minipdm-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minipdm -d minipdm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  minipdm-pgdata:
